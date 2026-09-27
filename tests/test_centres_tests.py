@@ -1,11 +1,15 @@
 def test_centre_crud_and_search(client, authed):
     headers, _ = authed
     c1 = client.post(
-        "/api/v1/centres/", json={"name": "EVE - Kochi", "location": "Kochi, Kerala"}, headers=headers
+        "/api/v1/centres/",
+        json={"name": "EVE - Kochi", "location": "Kochi, Kerala"},
+        headers=headers,
     )
     assert c1.status_code == 201
     c2 = client.post(
-        "/api/v1/centres/", json={"name": "EVE - Jaipur", "location": "Jaipur, Rajasthan"}, headers=headers
+        "/api/v1/centres/",
+        json={"name": "EVE - Jaipur", "location": "Jaipur, Rajasthan"},
+        headers=headers,
     )
     assert c2.status_code == 201
 

@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -8,14 +7,14 @@ from pydantic import BaseModel, ConfigDict, Field
 class CentreCreate(BaseModel):
     name: str = Field(min_length=2, max_length=255)
     location: str = Field(min_length=2, max_length=500)
-    phone: Optional[str] = Field(default=None, max_length=32)
+    phone: str | None = Field(default=None, max_length=32)
 
 
 class CentreUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=2, max_length=255)
-    location: Optional[str] = Field(default=None, min_length=2, max_length=500)
-    phone: Optional[str] = Field(default=None, max_length=32)
-    is_active: Optional[bool] = None
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    location: str | None = Field(default=None, min_length=2, max_length=500)
+    phone: str | None = Field(default=None, max_length=32)
+    is_active: bool | None = None
 
 
 class DiagnosticTestOut(BaseModel):
@@ -24,8 +23,8 @@ class DiagnosticTestOut(BaseModel):
     id: int
     name: str
     code: str
-    description: Optional[str] = None
-    category: Optional[str] = None
+    description: str | None = None
+    category: str | None = None
 
 
 class CentreTestOut(BaseModel):
@@ -44,7 +43,7 @@ class CentreOut(BaseModel):
     id: int
     name: str
     location: str
-    phone: Optional[str] = None
+    phone: str | None = None
     is_active: bool
     created_at: datetime
 
@@ -61,5 +60,5 @@ class CentreTestCreate(BaseModel):
 
 
 class CentreTestUpdate(BaseModel):
-    price: Optional[Decimal] = Field(default=None, gt=0, le=1000000)
-    is_available: Optional[bool] = None
+    price: Decimal | None = Field(default=None, gt=0, le=1000000)
+    is_available: bool | None = None

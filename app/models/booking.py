@@ -1,14 +1,21 @@
 import enum
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
+if TYPE_CHECKING:
+    from app.models.centre import Centre
+    from app.models.diagnostic_test import DiagnosticTest
+    from app.models.payment import Payment
+    from app.models.user import User
 
-class BookingStatus(str, enum.Enum):
+
+class BookingStatus(enum.StrEnum):
     PENDING = "PENDING"
     CONFIRMED = "CONFIRMED"
     FAILED = "FAILED"
@@ -19,9 +26,13 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     centre_id: Mapped[int] = mapped_column(ForeignKey("centres.id"), nullable=False, index=True)
-    test_id: Mapped[int] = mapped_column(ForeignKey("diagnostic_tests.id"), nullable=False, index=True)
+    test_id: Mapped[int] = mapped_column(
+        ForeignKey("diagnostic_tests.id"), nullable=False, index=True
+    )
 
     appointment_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     # Snapshot of price at booking time so later price changes don't rewrite history.
@@ -29,7 +40,9 @@ class Booking(Base):
     currency: Mapped[str] = mapped_column(String(8), default="INR", nullable=False)
 
     # Stored as plain string for SQLite/Postgres portability; validated via BookingStatus enum.
-    status: Mapped[str] = mapped_column(String(20), default=BookingStatus.PENDING.value, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default=BookingStatus.PENDING.value, nullable=False, index=True
+    )
 
     # Optional client idempotency key (Idempotency-Key header). Unique per user.
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

@@ -35,7 +35,9 @@ def create(
     current: User = Depends(get_current_user),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
-    booking, _ = create_booking(db, user_id=current.id, payload=payload, idempotency_key=idempotency_key)
+    booking, _ = create_booking(
+        db, user_id=current.id, payload=payload, idempotency_key=idempotency_key
+    )
     booking = (
         db.query(Booking)
         .options(joinedload(Booking.centre), joinedload(Booking.test))

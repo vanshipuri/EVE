@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 
 def _future(days=2):
-    return (datetime.utcnow() + timedelta(days=days)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat()
 
 
 def _book(client, headers, catalogue):
@@ -19,9 +19,7 @@ def _book(client, headers, catalogue):
 def test_payment_success_confirms_booking(client, authed, catalogue):
     headers, _ = authed
     booking = _book(client, headers, catalogue)
-    pay = client.post(
-        "/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers
-    )
+    pay = client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers)
     assert pay.status_code == 201, pay.text
     assert pay.json()["status"] == "SUCCESS"
 
@@ -39,12 +37,13 @@ def test_payment_failure_marks_booking_failed_and_allows_retry(client, authed, c
     )
     assert pay.status_code == 201
     assert pay.json()["status"] == "FAILED"
-    assert client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"] == "FAILED"
+    assert (
+        client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"]
+        == "FAILED"
+    )
 
     # Retry without failure succeeds
-    retry = client.post(
-        "/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers
-    )
+    retry = client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers)
     assert retry.status_code == 201
     assert retry.json()["status"] == "SUCCESS"
 
@@ -52,7 +51,12 @@ def test_payment_failure_marks_booking_failed_and_allows_retry(client, authed, c
 def test_payment_rejects_double_pay_on_confirmed(client, authed, catalogue):
     headers, _ = authed
     booking = _book(client, headers, catalogue)
-    assert client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers
+        ).status_code
+        == 201
+    )
     second = client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers)
     assert second.status_code == 409
 
@@ -61,8 +65,16 @@ def test_payment_rejects_cancelled_and_invalid_booking(client, authed, catalogue
     headers, _ = authed
     booking = _book(client, headers, catalogue)
     client.post(f"/api/v1/bookings/{booking['id']}/cancel", headers=headers)
-    assert client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers).status_code == 409
-    assert client.post("/api/v1/payments/", json={"booking_id": 999999}, headers=headers).status_code == 404
+    assert (
+        client.post(
+            "/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post("/api/v1/payments/", json={"booking_id": 999999}, headers=headers).status_code
+        == 404
+    )
 
 
 def test_payment_idempotency_key(client, authed, catalogue):
@@ -99,7 +111,10 @@ def test_webhook_idempotent_no_duplicates(client, authed, catalogue):
     assert after == before  # no duplicate payments created
 
     # Booking still CONFIRMED (not corrupted)
-    assert client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"] == "CONFIRMED"
+    assert (
+        client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"]
+        == "CONFIRMED"
+    )
 
 
 def test_webhook_failed_event_and_invalid_booking(client, authed, catalogue):
@@ -123,11 +138,19 @@ def test_webhook_ignores_terminal_states(client, authed, catalogue):
     headers, _ = authed
     booking = _book(client, headers, catalogue)
     # Confirm via direct payment
-    assert client.post("/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/payments/", json={"booking_id": booking["id"]}, headers=headers
+        ).status_code
+        == 201
+    )
     # Late FAILED webhook must NOT downgrade CONFIRMED
     late = client.post(
         "/api/v1/payments/webhook/",
         json={"event_id": "evt_late_001", "booking_id": booking["id"], "status": "FAILED"},
     )
     assert late.status_code == 200
-    assert client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"] == "CONFIRMED"
+    assert (
+        client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"]
+        == "CONFIRMED"
+    )

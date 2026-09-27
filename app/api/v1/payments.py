@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -11,7 +11,6 @@ from app.models.user import User
 from app.schemas.booking import Paginated
 from app.schemas.payment import PaymentCreate, PaymentOut, WebhookPayload, WebhookResponse
 from app.services.payment_service import create_payment, process_webhook
-from fastapi import HTTPException
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -25,7 +24,9 @@ def pay(
     current: User = Depends(get_current_user),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
-    payment, _ = create_payment(db, user_id=current.id, payload=payload, idempotency_key=idempotency_key)
+    payment, _ = create_payment(
+        db, user_id=current.id, payload=payload, idempotency_key=idempotency_key
+    )
     return payment
 
 

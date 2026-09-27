@@ -1,5 +1,11 @@
 # EVE Healthcare — Diagnostic Bookings & Simulated Payments API
 
+![CI](https://github.com/vanshipuri/EVE/actions/workflows/ci/badge.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
+![Tests](https://img.shields.io/badge/tests-23%20passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 Backend service for diagnostic test bookings with JWT auth, centre/test catalogue, booking state machine, mock payments, and an **idempotent payment webhook**. Built for the EVE Healthcare SDE Intern assignment.
 
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL (preferred) / SQLite fallback · JWT · Docker
@@ -212,6 +218,7 @@ PENDING ──pay SUCCESS──▶ CONFIRMED ──╳ (terminal: late FAILED we
 
 ```bash
 pytest -v        # 23 tests: auth (5) · centres/tests (4) · bookings (6) · payments+webhook (8)
+ruff check app tests && ruff format --check app tests   # lint (also enforced in CI)
 ```
 
 Suites use an isolated SQLite DB with per-test wipe (`tests/conftest.py` overrides `get_db` and disables rate limiting for determinism). Webhook tests replay the same event multiple times and assert payment counts don't grow.
@@ -245,6 +252,7 @@ docker-compose.yml     # api + postgres:16 + redis:7 with health-gated startup
 4. **Mock gateway is deterministic** — `simulate_failure` flag instead of randomness, so tests and demos are reproducible.
 5. **SQLite locally, Postgres in Docker/prod** — identical SQLAlchemy code paths; `create_all` on startup for assignment simplicity (Alembic in production).
 6. **Money as `NUMERIC(10,2)` + `currency` code** — no FX conversion; amounts echoed in INR by seed data.
+7. **API versioning** — routes live under `/api/v1` (e.g. the brief's `POST /payments/webhook/` is `POST /api/v1/payments/webhook/`); versioning from day one avoids breaking clients later.
 
 ---
 

@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -15,10 +15,9 @@ class BookingCreate(BaseModel):
     @field_validator("appointment_time")
     @classmethod
     def must_be_future(cls, v: datetime) -> datetime:
-        # Compare against UTC; accept naive datetimes as UTC for simplicity.
-        now = datetime.utcnow()
-        value = v.replace(tzinfo=None) if v.tzinfo else v
-        if value <= now:
+        # Normalize naive datetimes to UTC so aware/naive inputs compare correctly.
+        value = v if v.tzinfo else v.replace(tzinfo=UTC)
+        if value <= datetime.now(UTC):
             raise ValueError("appointment_time must be in the future")
         return v
 
@@ -30,8 +29,8 @@ class BookingOut(BaseModel):
     user_id: int
     centre_id: int
     test_id: int
-    centre_name: Optional[str] = None
-    test_name: Optional[str] = None
+    centre_name: str | None = None
+    test_name: str | None = None
     appointment_time: datetime
     amount: Decimal
     currency: str

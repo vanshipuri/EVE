@@ -9,13 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from app.core.rate_limit import limiter
-from app.db.session import Base, get_db
 
 # Import models so metadata is complete
 import app.models  # noqa: F401
+from app.core.rate_limit import limiter
+from app.db.session import Base, get_db
 
 
 @pytest.fixture(scope="session")
@@ -23,9 +21,7 @@ def test_engine():
     # Fresh file DB per test session (StaticPool keeps in-memory consistent if switched).
     if os.path.exists("./test_eve.db"):
         os.remove("./test_eve.db")
-    engine = create_engine(
-        "sqlite:///./test_eve.db", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///./test_eve.db", connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
     yield engine
     engine.dispose()
@@ -35,7 +31,9 @@ def test_engine():
 
 @pytest.fixture()
 def db(test_engine):
-    TestingSession = sessionmaker(bind=test_engine, autoflush=False, autocommit=False, expire_on_commit=False)
+    TestingSession = sessionmaker(
+        bind=test_engine, autoflush=False, autocommit=False, expire_on_commit=False
+    )
     session = TestingSession()
     yield session
     session.rollback()
@@ -74,9 +72,7 @@ def authed(client):
         json={"email": email, "password": "password123", "full_name": "Neha Sharma"},
     )
     assert res.status_code == 201, res.text
-    login = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "password123"}
-    )
+    login = client.post("/api/v1/auth/login", json={"email": email, "password": "password123"})
     assert login.status_code == 200, login.text
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}, res.json()

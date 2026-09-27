@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +9,7 @@ from app.models.payment import PaymentStatus
 
 class PaymentCreate(BaseModel):
     booking_id: int
-    payment_method: Optional[Literal["card", "upi", "netbanking", "wallet"]] = "upi"
+    payment_method: Literal["card", "upi", "netbanking", "wallet"] | None = "upi"
     # Test hook for the MOCK gateway: force a failure to exercise FAILED flows.
     simulate_failure: bool = False
 
@@ -22,9 +22,9 @@ class PaymentOut(BaseModel):
     amount: Decimal
     currency: str
     status: PaymentStatus
-    payment_method: Optional[str] = None
-    provider_payment_id: Optional[str] = None
-    failure_reason: Optional[str] = None
+    payment_method: str | None = None
+    provider_payment_id: str | None = None
+    failure_reason: str | None = None
     created_at: datetime
 
 
@@ -34,14 +34,14 @@ class WebhookPayload(BaseModel):
     event_id: str = Field(min_length=1, max_length=128)
     booking_id: int
     status: Literal["SUCCESS", "FAILED"]
-    provider_payment_id: Optional[str] = Field(default=None, max_length=128)
-    failure_reason: Optional[str] = Field(default=None, max_length=500)
+    provider_payment_id: str | None = Field(default=None, max_length=128)
+    failure_reason: str | None = Field(default=None, max_length=500)
 
 
 class WebhookResponse(BaseModel):
     received: bool = True
     deduped: bool = False
     booking_id: int
-    booking_status: Optional[str] = None
-    payment_id: Optional[int] = None
+    booking_status: str | None = None
+    payment_id: int | None = None
     message: str

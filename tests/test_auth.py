@@ -42,4 +42,6 @@ def test_signup_validation(client):
 
 def test_me_requires_auth(client):
     assert client.get("/api/v1/auth/me").status_code == 401
-    assert client.get("/api/v1/auth/me", headers={"Authorization": "Bearer junk"}).status_code == 401
+    assert (
+        client.get("/api/v1/auth/me", headers={"Authorization": "Bearer junk"}).status_code == 401
+    )

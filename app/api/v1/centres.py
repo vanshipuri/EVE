@@ -56,7 +56,9 @@ def create_centre(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    centre = Centre(name=payload.name.strip(), location=payload.location.strip(), phone=payload.phone)
+    centre = Centre(
+        name=payload.name.strip(), location=payload.location.strip(), phone=payload.phone
+    )
     db.add(centre)
     db.commit()
     db.refresh(centre)
@@ -152,7 +154,9 @@ def delete_centre(
 # ---- Tests offered by a centre (with price) ----
 
 
-@router.post("/{centre_id}/tests", response_model=CentreTestOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{centre_id}/tests", response_model=CentreTestOut, status_code=status.HTTP_201_CREATED
+)
 def attach_test(
     centre_id: int,
     payload: CentreTestCreate,
