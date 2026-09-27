@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVE Healthcare — API Demo Console</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="pulse" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </span>
+      <div>
+        <h1>EVE Healthcare</h1>
+        <p class="subtitle">Diagnostic Bookings API · Demo Console</p>
+      </div>
+    </div>
+    <div class="session">
+      <span id="auth-pill" class="pill muted">signed out</span>
+      <span id="user-chip" class="user-chip hidden"></span>
+      <button id="btn-logout" class="btn ghost hidden">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="auth" class="active">1 · Auth</button>
+    <button data-tab="centres">2 · Centres &amp; Tests</button>
+    <button data-tab="bookings">3 · Bookings</button>
+    <button data-tab="payments">4 · Payments</button>
+    <button data-tab="webhook">5 · Webhook</button>
+    <button data-tab="edge">6 · Edge Cases</button>
+    <button data-tab="console">API Console <span id="console-count" class="count">0</span></button>
+  </nav>
+
+  <main>
+    <!-- 1. AUTH -->
+    <section id="tab-auth" class="tab active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Create account</h2>
+          <p class="hint">POST /api/v1/auth/signup</p>
+          <form id="form-signup">
+            <label>Full name<input name="full_name" required minlength="2" placeholder="Neha Sharma" /></label>
+            <label>Email<input name="email" type="email" required placeholder="neha@example.com" /></label>
+            <label>Password (min 8 chars)<input name="password" type="password" required minlength="8" placeholder="password123" /></label>
+            <button class="btn primary" type="submit">Sign up</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Sign in</h2>
+          <p class="hint">POST /api/v1/auth/login → JWT</p>
+          <form id="form-login">
+            <label>Email<input name="email" type="email" required placeholder="neha@example.com" /></label>
+            <label>Password<input name="password" type="password" required placeholder="password123" /></label>
+            <button class="btn primary" type="submit">Sign in</button>
+          </form>
+          <div class="divider">or</div>
+          <button id="btn-demo-user" class="btn secondary">⚡ One-click demo user</button>
+          <p class="hint">Creates <code>demo@eve.health</code> (or signs in if it exists).</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Current session</h2>
+        <p class="hint">GET /api/v1/auth/me · token is stored in your browser (localStorage)</p>
+        <pre id="session-info" class="json">{ signed out }</pre>
+      </div>
+    </section>
+
+    <!-- 2. CENTRES & TESTS -->
+    <section id="tab-centres" class="tab">
+      <div class="toolbar">
+        <input id="centre-search" placeholder="Search centres by name or location…" />
+        <button id="btn-centre-refresh" class="btn secondary">Refresh</button>
+        <button id="btn-centre-new-toggle" class="btn primary">+ New centre</button>
+      </div>
+      <div id="centre-form-wrap" class="card hidden">
+        <h2>New diagnostic centre</h2>
+        <p class="hint">POST /api/v1/centres/ · requires sign-in</p>
+        <form id="form-centre" class="row-form">
+          <label>Name<input name="name" required minlength="2" placeholder="EVE Diagnostics - Indiranagar" /></label>
+          <label>Location<input name="location" required minlength="2" placeholder="Indiranagar, Bengaluru" /></label>
+          <label>Phone<input name="phone" placeholder="080-41120009" /></label>
+          <button class="btn primary" type="submit">Create</button>
+        </form>
+      </div>
+      <div id="centres-grid" class="cards"></div>
+      <div id="centre-detail" class="card hidden"></div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>Diagnostic test catalogue</h2>
+          <p class="hint">GET /api/v1/tests/</p>
+          <div id="tests-list" class="list"></div>
+        </div>
+        <div class="card">
+          <h2>Add test to catalogue</h2>
+          <p class="hint">POST /api/v1/tests/ · requires sign-in</p>
+          <form id="form-test">
+            <label>Name<input name="name" required minlength="2" placeholder="Vitamin D (25-OH)" /></label>
+            <label>Code (unique, A-Z 0-9 _ -)<input name="code" required pattern="[A-Z0-9_\-]+" placeholder="VITD" /></label>
+            <label>Category<input name="category" placeholder="Pathology" /></label>
+            <button class="btn primary" type="submit">Add test</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. BOOKINGS -->
+    <section id="tab-bookings" class="tab">
+      <div class="card">
+        <h2>Book a diagnostic test</h2>
+        <p class="hint">POST /api/v1/bookings/ · requires sign-in · amount is snapshotted from the centre price</p>
+        <form id="form-booking" class="row-form">
+          <label>Centre<select id="booking-centre" required></select></label>
+          <label>Test &amp; price<select id="booking-test" required></select></label>
+          <label>Appointment (future)<input id="booking-time" type="datetime-local" required /></label>
+          <label title="Same key + same user = same booking (no duplicates)">Idempotency-Key (optional)<input id="booking-key" placeholder="e.g. book-123" /></label>
+          <button class="btn primary" type="submit">Book · <span id="booking-amount">₹0</span></button>
+        </form>
+      </div>
+      <div class="toolbar">
+        <label class="inline">Status
+          <select id="booking-filter">
+            <option value="">All</option>
+            <option>PENDING</option><option>CONFIRMED</option><option>FAILED</option><option>CANCELLED</option>
+          </select>
+        </label>
+        <button id="btn-booking-refresh" class="btn secondary">Refresh my bookings</button>
+      </div>
+      <div id="bookings-list" class="cards"></div>
+    </section>
+
+    <!-- 4. PAYMENTS -->
+    <section id="tab-payments" class="tab">
+      <div class="card highlight">
+        <h2>Pay for a booking <span class="tag">mock gateway · no real money</span></h2>
+        <p class="hint">POST /api/v1/payments/ · SUCCESS → booking CONFIRMED · FAILED → booking FAILED (retry allowed)</p>
+        <form id="form-payment" class="row-form">
+          <label>Booking<select id="payment-booking" required></select></label>
+          <label>Method
+            <select id="payment-method">
+              <option>upi</option><option>card</option><option>netbanking</option><option>wallet</option>
+            </select>
+          </label>
+          <label class="check"><input id="payment-fail" type="checkbox" /> Simulate failure</label>
+          <label title="Same key = same payment (no double charge)">Idempotency-Key (optional)<input id="payment-key" placeholder="e.g. pay-123" /></label>
+          <button class="btn primary" type="submit">Pay now</button>
+        </form>
+      </div>
+      <div class="toolbar">
+        <button id="btn-payment-refresh" class="btn secondary">Refresh my payments</button>
+      </div>
+      <div id="payments-list" class="cards"></div>
+    </section>
+
+    <!-- 5. WEBHOOK -->
+    <section id="tab-webhook" class="tab">
+      <div class="card highlight">
+        <h2>Simulated provider webhook <span class="tag">idempotent on event_id</span></h2>
+        <p class="hint">POST /api/v1/payments/webhook/ · no sign-in needed (providers call it) · replaying the same
+          <code>event_id</code> returns <code>deduped: true</code> with zero state change</p>
+        <form id="form-webhook" class="row-form">
+          <label>Event ID<input id="webhook-event" required /></label>
+          <label>Booking<select id="webhook-booking" required></select></label>
+          <label>Provider status
+            <select id="webhook-status"><option>SUCCESS</option><option>FAILED</option></select>
+          </label>
+          <button class="btn primary" type="submit">Send event</button>
+          <button id="btn-webhook-replay" class="btn secondary" type="button" disabled>↻ Replay same event</button>
+          <button id="btn-webhook-new" class="btn ghost" type="button">🎲 New event ID</button>
+        </form>
+      </div>
+      <h3 class="section-title">Webhook deliveries</h3>
+      <div id="webhook-results" class="cards"></div>
+    </section>
+
+    <!-- 6. EDGE CASES -->
+    <section id="tab-edge" class="tab">
+      <div class="card">
+        <h2>Edge-case playground</h2>
+        <p class="hint">Each button fires the real API and checks the result. Sign in first (seeded catalogue recommended:
+          <code>python -m app.seed</code>).</p>
+        <div class="btn-row">
+          <button class="btn secondary" data-edge="pastDate">Past appointment → 422</button>
+          <button class="btn secondary" data-edge="noAuth">No token → 401</button>
+          <button class="btn secondary" data-edge="doublePay">Double-pay CONFIRMED → 409</button>
+          <button class="btn secondary" data-edge="invalidPay">Pay bad booking ID → 404</button>
+          <button class="btn secondary" data-edge="webhookReplay">Replay webhook 3× → deduped</button>
+          <button class="btn secondary" data-edge="lateFailed">Late FAILED after CONFIRMED → ignored</button>
+          <button class="btn secondary" data-edge="otherUser">Read another user's booking → 404</button>
+          <button class="btn secondary" data-edge="dupCode">Duplicate test code → 409</button>
+          <button id="btn-edge-all" class="btn primary">▶ Run all</button>
+        </div>
+      </div>
+      <div id="edge-results" class="cards"></div>
+    </section>
+
+    <!-- CONSOLE -->
+    <section id="tab-console" class="tab">
+      <div class="toolbar">
+        <span class="hint">Every request this UI makes, with status + JSON. Your API explorer.</span>
+        <button id="btn-console-clear" class="btn ghost">Clear</button>
+      </div>
+      <div id="console-log"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>EVE Healthcare API · Demo Console · Backend docs at <a href="/docs" target="_blank" rel="noreferrer">/docs</a></span>
+  </footer>
+
+  <div id="toasts"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
