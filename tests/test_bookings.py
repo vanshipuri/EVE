@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 
 def _future(days=2):
-    return (datetime.utcnow() + timedelta(days=days)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat()
 
 
 def test_booking_happy_path_and_amount_snapshot(client, authed, catalogue):
@@ -23,7 +23,7 @@ def test_booking_happy_path_and_amount_snapshot(client, authed, catalogue):
 def test_booking_rejects_past_time(client, authed, catalogue):
     headers, _ = authed
     c, t = catalogue["centre"], catalogue["cbc"]
-    past = (datetime.utcnow() - timedelta(days=1)).isoformat()
+    past = (datetime.now(UTC) - timedelta(days=1)).isoformat()
     r = client.post(
         "/api/v1/bookings/",
         json={"centre_id": c["id"], "test_id": t["id"], "appointment_time": past},
@@ -73,7 +73,10 @@ def test_booking_requires_auth_and_ownership(client, authed, catalogue):
     ).json()["access_token"]
     other_headers = {"Authorization": f"Bearer {token}"}
     assert client.get(f"/api/v1/bookings/{created['id']}", headers=other_headers).status_code == 404
-    assert client.post(f"/api/v1/bookings/{created['id']}/cancel", headers=other_headers).status_code == 404
+    assert (
+        client.post(f"/api/v1/bookings/{created['id']}/cancel", headers=other_headers).status_code
+        == 404
+    )
 
 
 def test_booking_idempotency_key(client, authed, catalogue):
@@ -99,4 +102,6 @@ def test_cancel_flow_and_double_cancel(client, authed, catalogue):
     assert cancelled.status_code == 200
     assert cancelled.json()["status"] == "CANCELLED"
     # Second cancel -> 409
-    assert client.post(f"/api/v1/bookings/{created['id']}/cancel", headers=headers).status_code == 409
+    assert (
+        client.post(f"/api/v1/bookings/{created['id']}/cancel", headers=headers).status_code == 409
+    )

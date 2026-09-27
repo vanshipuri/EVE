@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.exception_handler(Exception)
-    async def unhandled_handler(request: Request, exc: Exception):
+    async def unhandled_handler(request: Request, exc: Exception):  # noqa: BLE001 - top-level guard
         log.error("unhandled_error", path=request.url.path, error=str(exc))
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 

@@ -42,9 +42,7 @@ def list_tests(
     query = db.query(DiagnosticTest)
     if q:
         like = f"%{q}%"
-        query = query.filter(
-            (DiagnosticTest.name.ilike(like)) | (DiagnosticTest.code.ilike(like))
-        )
+        query = query.filter((DiagnosticTest.name.ilike(like)) | (DiagnosticTest.code.ilike(like)))
     total = query.count()
     items = query.order_by(DiagnosticTest.id).limit(limit).offset(offset).all()
     return {"items": items, "total": total, "limit": limit, "offset": offset}

@@ -1,7 +1,6 @@
 """Application configuration via environment variables."""
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,10 +24,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     # Webhook: if set, callers must send matching X-Webhook-Secret header.
-    WEBHOOK_SECRET: Optional[str] = None
+    WEBHOOK_SECRET: str | None = None
 
     # Redis (optional): if unset or unreachable, app falls back to in-memory cache.
-    REDIS_URL: Optional[str] = None
+    REDIS_URL: str | None = None
 
     # Rate limiting (slowapi). Disabled automatically when ENVIRONMENT == "test".
     RATE_LIMIT_ENABLED: bool = True

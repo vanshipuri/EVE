@@ -6,7 +6,7 @@ Never fails the request: any Redis error degrades to in-memory/no-cache.
 
 import json
 import time
-from typing import Any, Optional
+from typing import Any
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -31,12 +31,12 @@ def _get_redis():
         _redis_client = client
         log.info("cache_backend", backend="redis")
         return client
-    except Exception as exc:  # pragma: no cover - depends on infra
+    except Exception as exc:  # noqa: BLE001 - Redis down must not break app  # pragma: no cover - infra
         log.warning("redis_unavailable_fallback_memory", error=str(exc))
         return None
 
 
-def cache_get(key: str) -> Optional[Any]:
+def cache_get(key: str) -> Any | None:
     # Try Redis first
     client = _get_redis()
     if client is not None:
@@ -44,7 +44,7 @@ def cache_get(key: str) -> Optional[Any]:
             raw = client.get(key)
             if raw:
                 return json.loads(raw)
-        except Exception:
+        except Exception:  # noqa: BLE001 - cache must never fail a request
             pass
     # In-memory fallback
     item = _memory.get(key)
@@ -64,7 +64,7 @@ def cache_set(key: str, value: Any, ttl_seconds: int = 60) -> None:
         try:
             client.setex(key, ttl_seconds, raw)
             return
-        except Exception:
+        except Exception:  # noqa: BLE001 - cache must never fail a request
             pass
     _memory[key] = (time.time() + ttl_seconds, raw)
 
@@ -75,7 +75,7 @@ def cache_invalidate_prefix(prefix: str) -> None:
         try:
             for key in client.scan_iter(f"{prefix}*"):
                 client.delete(key)
-        except Exception:
+        except Exception:  # noqa: BLE001 - cache must never fail a request
             pass
     for key in [k for k in _memory if k.startswith(prefix)]:
         _memory.pop(key, None)

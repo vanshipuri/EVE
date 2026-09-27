@@ -1,24 +1,66 @@
 """Seed demo data: 3 centres, 6 tests, priced links. Idempotent."""
 
-from app.db.session import Base, SessionLocal, engine
 import app.models  # noqa: F401
+from app.db.session import Base, SessionLocal, engine
 from app.models.centre import Centre
 from app.models.centre_test import CentreTest
 from app.models.diagnostic_test import DiagnosticTest
 
 CENTRES = [
-    {"name": "EVE Diagnostics - Koramangala", "location": "Koramangala, Bengaluru", "phone": "080-41120001"},
-    {"name": "EVE Diagnostics - Andheri", "location": "Andheri West, Mumbai", "phone": "022-48930002"},
-    {"name": "EVE Diagnostics - Sector 62", "location": "Sector 62, Noida", "phone": "0120-4560003"},
+    {
+        "name": "EVE Diagnostics - Koramangala",
+        "location": "Koramangala, Bengaluru",
+        "phone": "080-41120001",
+    },
+    {
+        "name": "EVE Diagnostics - Andheri",
+        "location": "Andheri West, Mumbai",
+        "phone": "022-48930002",
+    },
+    {
+        "name": "EVE Diagnostics - Sector 62",
+        "location": "Sector 62, Noida",
+        "phone": "0120-4560003",
+    },
 ]
 
 TESTS = [
-    {"name": "Complete Blood Count", "code": "CBC", "description": "Hemoglobin, WBC, platelets & more", "category": "Pathology"},
-    {"name": "Lipid Profile", "code": "LIPID", "description": "Cholesterol, triglycerides, HDL/LDL", "category": "Pathology"},
-    {"name": "HbA1c (Glycated Hemoglobin)", "code": "HBA1C", "description": "3-month average blood sugar", "category": "Pathology"},
-    {"name": "Thyroid Profile (T3/T4/TSH)", "code": "THYROID", "description": "Complete thyroid function panel", "category": "Pathology"},
-    {"name": "Chest X-Ray", "code": "XRAY_CHEST", "description": "Digital chest radiograph", "category": "Radiology"},
-    {"name": "Abdominal Ultrasound", "code": "USG_ABD", "description": "Whole abdomen ultrasound scan", "category": "Radiology"},
+    {
+        "name": "Complete Blood Count",
+        "code": "CBC",
+        "description": "Hemoglobin, WBC, platelets & more",
+        "category": "Pathology",
+    },
+    {
+        "name": "Lipid Profile",
+        "code": "LIPID",
+        "description": "Cholesterol, triglycerides, HDL/LDL",
+        "category": "Pathology",
+    },
+    {
+        "name": "HbA1c (Glycated Hemoglobin)",
+        "code": "HBA1C",
+        "description": "3-month average blood sugar",
+        "category": "Pathology",
+    },
+    {
+        "name": "Thyroid Profile (T3/T4/TSH)",
+        "code": "THYROID",
+        "description": "Complete thyroid function panel",
+        "category": "Pathology",
+    },
+    {
+        "name": "Chest X-Ray",
+        "code": "XRAY_CHEST",
+        "description": "Digital chest radiograph",
+        "category": "Radiology",
+    },
+    {
+        "name": "Abdominal Ultrasound",
+        "code": "USG_ABD",
+        "description": "Whole abdomen ultrasound scan",
+        "category": "Radiology",
+    },
 ]
 
 PRICES = {
