@@ -97,6 +97,10 @@ def create_app() -> FastAPI:
     app.include_router(tests_router, prefix="/api/v1")
     app.include_router(bookings_router, prefix="/api/v1")
     app.include_router(payments_router, prefix="/api/v1")
+    # Brief-compatible aliases: the assignment names POST /payments/ and
+    # POST /payments/webhook/ literally, so the payments router is also mounted
+    # unversioned (hidden from OpenAPI; canonical API stays /api/v1).
+    app.include_router(payments_router, prefix="", include_in_schema=False)
 
     return app
 

@@ -154,3 +154,36 @@ def test_webhook_ignores_terminal_states(client, authed, catalogue):
         client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()["status"]
         == "CONFIRMED"
     )
+
+
+def test_unversioned_payment_alias(client, authed, catalogue):
+    """Brief-literal path POST /payments/ works (canonical: /api/v1/payments/)."""
+    headers, _ = authed
+    c, t = catalogue["centre"], catalogue["cbc"]
+    booking = client.post(
+        "/api/v1/bookings/",
+        json={"centre_id": c["id"], "test_id": t["id"], "appointment_time": _future()},
+        headers=headers,
+    ).json()
+    r = client.post("/payments/", json={"booking_id": booking["id"]}, headers=headers)
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "SUCCESS"
+    refreshed = client.get(f"/api/v1/bookings/{booking['id']}", headers=headers).json()
+    assert refreshed["status"] == "CONFIRMED"
+
+
+def test_unversioned_webhook_alias_idempotent(client, authed, catalogue):
+    """Brief-literal path POST /payments/webhook/ works and is idempotent."""
+    headers, _ = authed
+    c, t = catalogue["centre"], catalogue["cbc"]
+    booking = client.post(
+        "/api/v1/bookings/",
+        json={"centre_id": c["id"], "test_id": t["id"], "appointment_time": _future()},
+        headers=headers,
+    ).json()
+    payload = {"event_id": "evt_alias_001", "booking_id": booking["id"], "status": "SUCCESS"}
+    first = client.post("/payments/webhook/", json=payload)
+    replay = client.post("/payments/webhook/", json=payload)
+    assert first.status_code == 200 and replay.status_code == 200
+    assert first.json()["deduped"] is False
+    assert replay.json()["deduped"] is True

@@ -3,14 +3,14 @@
 ![CI](https://github.com/vanshipuri/EVE/actions/workflows/ci/badge.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
-![Tests](https://img.shields.io/badge/tests-26%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-28%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 Backend service for diagnostic test bookings with JWT auth, centre/test catalogue, booking state machine, mock payments, and an **idempotent payment webhook**. Built for the EVE Healthcare SDE Intern assignment.
 
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL (preferred) / SQLite fallback · JWT · Docker
 - **Docs:** interactive Swagger at `/docs` · ReDoc at `/redoc`
-- **Tests:** 26 integration tests, all passing (`pytest`)
+- **Tests:** 28 integration tests, all passing (`pytest`)
 
 ---
 
@@ -24,7 +24,7 @@ Backend service for diagnostic test bookings with JWT auth, centre/test catalogu
 | 4. Simulated payment `POST /payments/` → SUCCESS/FAILED | ✅ Mock gateway (deterministic, `simulate_failure` test hook), updates booking |
 | 5. Webhook `POST /payments/webhook/` idempotent | ✅ `event_id` PK dedup ledger, race-safe, terminal-state guards |
 | 6. Edge cases | ✅ 422/401/403/404/409 handled + tested (see table below) |
-| Bonus | ✅ Docker + Compose (Postgres + Redis) · Swagger · 25 tests · structured logs · pagination · rate limiting · Redis-or-memory cache · `Idempotency-Key` on writes · seed data · demo UI at `/` |
+| Bonus | ✅ Docker + Compose (Postgres + Redis) · Swagger · 28 tests · structured logs · pagination · rate limiting · Redis-or-memory cache · `Idempotency-Key` on writes · seed data · demo UI at `/` |
 
 ---
 
@@ -123,7 +123,7 @@ Base path: `/api/v1`. Full interactive reference with schemas: **`/docs`**.
 | `GET /payments/{id}` | ✅ | Payment detail |
 | `POST /payments/webhook/` | secret* | Provider callback (`event_id`, `booking_id`, `SUCCESS`/`FAILED`) — **idempotent** |
 
-\* No JWT by design (provider calls it); optional `X-Webhook-Secret` when `WEBHOOK_SECRET` is set.
+\* No JWT by design (provider calls it); optional `X-Webhook-Secret` when `WEBHOOK_SECRET` is set. Unversioned aliases `POST /payments/` and `POST /payments/webhook/` are also mounted for brief compatibility (canonical: `/api/v1`).
 
 ### Example requests (copy-paste flow)
 
@@ -203,6 +203,8 @@ PENDING ──pay SUCCESS──▶ CONFIRMED ──╳ (terminal: late FAILED we
 4. **Invalid IDs:** unknown `booking_id` → `404` **without** recording the event, so the provider can fix and retry (recording it would falsely "succeed" a broken event).
 5. **Client-side too:** `POST /bookings/` and `POST /payments/` honor an `Idempotency-Key` header (same key → same resource, no duplicates) — tested.
 
+**Retry contract for providers:** any event may be safely retried — replays return `200 {deduped: true}` with zero side effects. `404` means fix the `booking_id` and resend; `5xx`/timeouts mean retry with backoff. (A Celery-backed retry queue with exponential backoff is the planned production upgrade — see improvements.)
+
 ---
 
 ## Edge cases handled
@@ -230,7 +232,7 @@ PENDING ──pay SUCCESS──▶ CONFIRMED ──╳ (terminal: late FAILED we
 ## Tests
 
 ```bash
-pytest -v        # 26 tests: auth (5) · centres/tests (4) · bookings (6) · payments+webhook (8) · frontend (3)
+pytest -v        # 28 tests: auth (5) · centres/tests (4) · bookings (6) · payments+webhook (10) · frontend (3)
 ruff check app tests && ruff format --check app tests   # lint (also enforced in CI)
 ```
 
@@ -266,7 +268,7 @@ docker-compose.yml     # api + postgres:16 + redis:7 with health-gated startup
 4. **Mock gateway is deterministic** — `simulate_failure` flag instead of randomness, so tests and demos are reproducible.
 5. **SQLite locally, Postgres in Docker/prod** — identical SQLAlchemy code paths; `create_all` on startup for assignment simplicity (Alembic in production).
 6. **Money as `NUMERIC(10,2)` + `currency` code** — no FX conversion; amounts echoed in INR by seed data.
-7. **API versioning** — routes live under `/api/v1` (e.g. the brief's `POST /payments/webhook/` is `POST /api/v1/payments/webhook/`); versioning from day one avoids breaking clients later.
+7. **API versioning** — routes live under `/api/v1` (e.g. the brief's `POST /payments/webhook/` is `POST /api/v1/payments/webhook/`); versioning from day one avoids breaking clients later. The brief's literal paths (`POST /payments/`, `POST /payments/webhook/`) are additionally mounted as hidden aliases, so both styles work.
 
 ---
 
