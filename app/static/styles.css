@@ -29,18 +29,20 @@ body {
 }
 
 /* ---------- header ---------- */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(10, 16, 28, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--card-border);
+}
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--card-border);
-  backdrop-filter: blur(8px);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(10, 16, 28, 0.85);
+  padding: 1rem 1.5rem 0.6rem;
 }
 .brand { display: flex; align-items: center; gap: 0.8rem; }
 .brand h1 { font-size: 1.25rem; margin: 0; letter-spacing: 0.2px; }
@@ -62,11 +64,14 @@ body {
 
 /* ---------- tabs ---------- */
 .tabs {
-  display: flex; gap: 0.4rem; flex-wrap: wrap;
-  padding: 0.9rem 1.5rem 0;
+  display: flex; gap: 0.4rem; flex-wrap: nowrap;
+  overflow-x: auto; scrollbar-width: none;
+  padding: 0.4rem 1.5rem 0.75rem;
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tabs button {
   font: inherit; font-size: 0.9rem; font-weight: 600;
+  white-space: nowrap; flex: 0 0 auto;
   color: var(--muted);
   background: transparent;
   border: 1px solid transparent;
@@ -221,3 +226,31 @@ select option { background: #0e1626; }
 
 footer { text-align: center; color: var(--muted); font-size: 0.82rem; padding: 1.5rem; }
 footer a { color: var(--accent); }
+
+/* ---------- ux polish ---------- */
+.spinner {
+  display: inline-block; width: 0.9em; height: 0.9em;
+  border: 2px solid rgba(140, 160, 190, 0.4); border-top-color: currentColor;
+  border-radius: 50%; vertical-align: -0.15em;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.cards .card { transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+.cards .card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(45, 212, 191, 0.35);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+#centre-detail { scroll-margin-top: 170px; }
+
+#console-log .path {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1 1 auto; min-width: 0;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 184, 255, 0.25); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 184, 255, 0.45); }
+::-webkit-scrollbar-track { background: transparent; }

@@ -24,6 +24,34 @@ const pill = (status) => {
 };
 const fmtTime = (iso) => { try { return new Date(iso).toLocaleString(); } catch { return iso; } };
 const randEvent = () => "evt_" + Math.random().toString(36).slice(2, 10);
+
+const debounce = (fn, ms = 350) => {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+};
+
+async function withLoading(btn, label, fn) {
+  if (!btn || btn.disabled) return;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> ${esc(label)}`;
+  try {
+    await fn();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+function requireAuth() {
+  if (state.user) return true;
+  toast("Sign in required", "Please sign in first.", "err");
+  switchTab("auth");
+  return false;
+}
 const futureISO = (days = 2) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 16);
 
 /* ---------------- API + console + toasts ---------------- */
@@ -74,7 +102,7 @@ function renderConsole() {
   box.innerHTML = state.log.map((e) => {
     const cls = e.status >= 200 && e.status < 300 ? "status-2" : e.status >= 400 ? "status-4" : "";
     return `<details>
-      <summary><span class="method">${esc(e.method)}</span><span>${esc(e.path)}</span>
+      <summary><span class="method">${esc(e.method)}</span><span class="path">${esc(e.path)}</span>
       <span class="${cls}">${e.status || "ERR"}</span><span style="color:var(--muted)">${esc(e.t)}</span></summary>
       <pre class="json">▸ request:\n${esc(JSON.stringify(e.req, null, 2))}\n\n◂ response (${e.status}):\n${esc(JSON.stringify(e.res, null, 2))}</pre>
     </details>`;
@@ -250,14 +278,15 @@ async function updateBookingTests() {
     detail = state.centreDetail = data;
   }
   const avail = detail.tests.filter((t) => t.is_available);
-  ts.innerHTML = avail.map((t) => `<option value="${t.test.id}" data-price="${t.price}">${esc(t.test.code)} — ${esc(t.test.name)} · ₹${t.price}</option>`).join("")
+  ts.innerHTML = avail.map((t) => `<option value="${t.test.id}" data-price="${t.price}">${esc(t.test.code)} · ₹${t.price} — ${esc(t.test.name)}</option>`).join("")
     || `<option value="">(no tests at this centre)</option>`;
   updateBookingAmount();
 }
 
 function updateBookingAmount() {
   const opt = $("booking-test").selectedOptions[0];
-  $("booking-amount").textContent = opt && opt.dataset.price ? inr(opt.dataset.price) : inr(0);
+  const amt = $("booking-amount");
+  if (amt) amt.textContent = opt && opt.dataset.price ? inr(opt.dataset.price) : inr(0);
 }
 
 async function cancelBooking(id) {
@@ -302,7 +331,7 @@ function fillPaymentForm(preselect) {
   const sel = $("payment-booking");
   const payable = state.bookings.filter((b) => b.status === "PENDING" || b.status === "FAILED");
   sel.innerHTML = payable.map((b) => `<option value="${b.id}">#${b.id} · ${esc(b.test_name || "")} · ${b.status} · ₹${b.amount}</option>`).join("")
-    || `<option value="">(no payable bookings — book a test first)</option>`;
+    || `<option value="">(no payable bookings)</option>`;
   if (preselect) sel.value = String(preselect);
 }
 
@@ -471,7 +500,8 @@ document.addEventListener("DOMContentLoaded", () => {
     else toast("Login failed", "HTTP " + status + " · " + (data.detail || ""), "err");
   });
 
-  $("btn-demo-user").addEventListener("click", async () => {
+  $("btn-demo-user").addEventListener("click", () => {
+    withLoading($("btn-demo-user"), "Signing in…", async () => {
     const creds = { email: "demo@eve.health", password: "password123", full_name: "Demo User" };
     let r = await api("POST", "/auth/signup", creds);
     if (r.status !== 201 && r.data?.detail !== "Email already registered") {
@@ -479,6 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     r = await api("POST", "/auth/login", { email: creds.email, password: creds.password });
     if (r.status === 200) { setToken(r.data.access_token); await loadMe(); refreshAuthed(); toast("Signed in as demo user", creds.email, "ok"); }
+    });
   });
 
   $("btn-logout").addEventListener("click", () => {
@@ -487,7 +518,11 @@ document.addEventListener("DOMContentLoaded", () => {
     toast("Signed out", "", "info");
   });
 
-  $("centre-search").addEventListener("input", () => loadCentres());
+  const debouncedSearch = debounce(() => loadCentres());
+  $("centre-search").addEventListener("input", debouncedSearch);
+  $("centre-search").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); loadCentres(); }
+  });
   $("btn-centre-refresh").addEventListener("click", () => { loadCentres(); loadTests(); });
   $("btn-centre-new-toggle").addEventListener("click", () => $("centre-form-wrap").classList.toggle("hidden"));
 
@@ -513,8 +548,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("booking-centre").addEventListener("change", updateBookingTests);
   $("booking-test").addEventListener("change", updateBookingAmount);
   $("booking-time").value = futureISO(2);
-  $("form-booking").addEventListener("submit", async (e) => {
+  $("form-booking").addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!requireAuth()) return;
+    withLoading(e.target.querySelector('button[type="submit"]'), "Booking…", async () => {
     const headers = {};
     if ($("booking-key").value.trim()) headers["Idempotency-Key"] = $("booking-key").value.trim();
     const { status, data } = await api("POST", "/bookings/", {
@@ -524,12 +561,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }, headers);
     if (status === 201) { toast("Booked! PENDING", "#" + data.id + " · ₹" + data.amount, "ok"); loadBookings().then(fillPaymentForm); }
     else toast("Booking failed", "HTTP " + status + " · " + (data.detail || JSON.stringify(data)), "err");
+    });
   });
   $("booking-filter").addEventListener("change", loadBookings);
   $("btn-booking-refresh").addEventListener("click", loadBookings);
 
-  $("form-payment").addEventListener("submit", async (e) => {
+  $("form-payment").addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!requireAuth()) return;
+    withLoading(e.target.querySelector('button[type="submit"]'), "Paying…", async () => {
     const headers = {};
     if ($("payment-key").value.trim()) headers["Idempotency-Key"] = $("payment-key").value.trim();
     const { status, data } = await api("POST", "/payments/", {
@@ -542,13 +582,19 @@ document.addEventListener("DOMContentLoaded", () => {
         "ref " + data.provider_payment_id, data.status === "SUCCESS" ? "ok" : "err");
       loadBookings(); loadPayments();
     } else toast("Payment failed", "HTTP " + status + " · " + (data.detail || ""), "err");
+    });
   });
   $("btn-payment-refresh").addEventListener("click", loadPayments);
 
   $("webhook-event").value = randEvent();
   $("btn-webhook-new").addEventListener("click", () => { $("webhook-event").value = randEvent(); });
-  $("form-webhook").addEventListener("submit", async (e) => {
+  $("form-webhook").addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!Number($("webhook-booking").value)) {
+      toast("No booking selected", "Sign in and book a test first.", "err");
+      return;
+    }
+    withLoading(e.target.querySelector('button[type="submit"]'), "Sending…", async () => {
     state.lastWebhook = {
       event_id: $("webhook-event").value.trim(),
       booking_id: Number($("webhook-booking").value),
@@ -561,6 +607,7 @@ document.addEventListener("DOMContentLoaded", () => {
       toast(data.deduped ? "Duplicate ignored (idempotent)" : "Webhook processed", data.message, data.deduped ? "info" : "ok");
       loadBookings().then(() => { fillPaymentForm(); fillWebhookForm(); }); loadPayments();
     } else toast("Webhook failed", "HTTP " + status + " · " + (data.detail || ""), "err");
+    });
   });
   $("btn-webhook-replay").addEventListener("click", async () => {
     if (!state.lastWebhook) return;
@@ -573,10 +620,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!state.user) return toast("Sign in first", "Edge tests need an account.", "err");
       edgeTests[b.dataset.edge]();
     }));
-  $("btn-edge-all").addEventListener("click", async () => {
+  $("btn-edge-all").addEventListener("click", () => {
     if (!state.user) return toast("Sign in first", "Edge tests need an account.", "err");
-    for (const key of Object.keys(edgeTests)) await edgeTests[key]();
-    toast("Edge suite finished", "See results above + API Console.", "ok");
+    withLoading($("btn-edge-all"), "Running…", async () => {
+      for (const key of Object.keys(edgeTests)) await edgeTests[key]();
+      toast("Edge suite finished", "See results above + API Console.", "ok");
+    });
   });
 
   $("btn-console-clear").addEventListener("click", () => {
