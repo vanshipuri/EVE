@@ -1,5 +1,9 @@
-def test_demo_page_served(client):
-    r = client.get("/demo")
+import pytest
+
+
+@pytest.mark.parametrize("path", ["/", "/demo"])
+def test_demo_pages_served(client, path):
+    r = client.get(path)
     assert r.status_code == 200
     assert "text/html" in r.headers["content-type"]
     assert "EVE Healthcare" in r.text

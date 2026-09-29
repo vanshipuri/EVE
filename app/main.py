@@ -25,6 +25,8 @@ log = get_logger("eve")
 # Import models so Base.metadata includes every table before create_all.
 import app.models  # noqa: F401,E402
 
+STATIC_DIR = Path(__file__).parent / "static"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -74,27 +76,21 @@ def create_app() -> FastAPI:
         log.error("unhandled_error", path=request.url.path, error=str(exc))
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-    @app.get("/", tags=["meta"])
+    @app.get("/", tags=["demo"])
     def root():
-        return {
-            "service": settings.APP_NAME,
-            "version": settings.APP_VERSION,
-            "docs": "/docs",
-            "health": "/health",
-            "demo": "/demo",
-        }
+        """Demo UI landing page (also at /demo). API docs: /docs, health: /health."""
+        return FileResponse(STATIC_DIR / "index.html")
 
     @app.get("/health", tags=["meta"])
     def health():
         return {"status": "ok", "version": settings.APP_VERSION}
 
     # Demo UI (vanilla HTML/CSS/JS, no build step) for manual testing.
-    static_dir = Path(__file__).parent / "static"
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/demo", tags=["demo"])
     def demo():
-        return FileResponse(static_dir / "index.html")
+        return FileResponse(STATIC_DIR / "index.html")
 
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(centres_router, prefix="/api/v1")
