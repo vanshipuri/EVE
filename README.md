@@ -3,14 +3,14 @@
 ![CI](https://github.com/vanshipuri/EVE/actions/workflows/ci/badge.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
-![Tests](https://img.shields.io/badge/tests-25%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-26%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 Backend service for diagnostic test bookings with JWT auth, centre/test catalogue, booking state machine, mock payments, and an **idempotent payment webhook**. Built for the EVE Healthcare SDE Intern assignment.
 
 - **Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · PostgreSQL (preferred) / SQLite fallback · JWT · Docker
 - **Docs:** interactive Swagger at `/docs` · ReDoc at `/redoc`
-- **Tests:** 25 integration tests, all passing (`pytest`)
+- **Tests:** 26 integration tests, all passing (`pytest`)
 
 ---
 
@@ -24,7 +24,7 @@ Backend service for diagnostic test bookings with JWT auth, centre/test catalogu
 | 4. Simulated payment `POST /payments/` → SUCCESS/FAILED | ✅ Mock gateway (deterministic, `simulate_failure` test hook), updates booking |
 | 5. Webhook `POST /payments/webhook/` idempotent | ✅ `event_id` PK dedup ledger, race-safe, terminal-state guards |
 | 6. Edge cases | ✅ 422/401/403/404/409 handled + tested (see table below) |
-| Bonus | ✅ Docker + Compose (Postgres + Redis) · Swagger · 25 tests · structured logs · pagination · rate limiting · Redis-or-memory cache · `Idempotency-Key` on writes · seed data · demo UI at `/demo` |
+| Bonus | ✅ Docker + Compose (Postgres + Redis) · Swagger · 25 tests · structured logs · pagination · rate limiting · Redis-or-memory cache · `Idempotency-Key` on writes · seed data · demo UI at `/` |
 
 ---
 
@@ -60,8 +60,8 @@ The `api` service auto-runs `python -m app.seed` (3 centres, 6 tests, priced lin
 
 ### Demo UI — try it in your browser (no setup)
 
-Open **http://localhost:8000/demo** — a polished single-page console (vanilla HTML/CSS/JS, served by
-the API itself) that exercises every backend feature end to end:
+Open **http://localhost:8000/** (also at `/demo`) — a polished single-page console (vanilla HTML/CSS/JS,
+served by the API itself) that exercises every backend feature end to end:
 
 1. **Auth** — signup, login, one-click demo user, live session inspector
 2. **Centres & Tests** — search, create centres/tests, attach tests with per-centre prices
@@ -230,7 +230,7 @@ PENDING ──pay SUCCESS──▶ CONFIRMED ──╳ (terminal: late FAILED we
 ## Tests
 
 ```bash
-pytest -v        # 25 tests: auth (5) · centres/tests (4) · bookings (6) · payments+webhook (8) · frontend (2)
+pytest -v        # 26 tests: auth (5) · centres/tests (4) · bookings (6) · payments+webhook (8) · frontend (3)
 ruff check app tests && ruff format --check app tests   # lint (also enforced in CI)
 ```
 
@@ -250,7 +250,7 @@ app/
   schemas/             # Pydantic v2 request/response models + pagination envelope
   api/v1/              # auth, centres, diagnostic_tests, bookings, payments (+ webhook)
   services/            # booking_service, payment_service (mock gateway + webhook processor)
-  static/              # demo UI: index.html, styles.css, app.js (served at /demo)
+  static/              # demo UI: index.html, styles.css, app.js (served at / and /demo)
 tests/                 # conftest + 4 suites, 23 tests
 Dockerfile             # slim Python 3.11 + healthcheck
 docker-compose.yml     # api + postgres:16 + redis:7 with health-gated startup
